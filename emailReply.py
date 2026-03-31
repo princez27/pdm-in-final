@@ -59,7 +59,6 @@ EXCLUDED_SENDERS = {
     "uniopsservice@unilever.com", "marketing@united-group.in"
 }
 
-ks
 # -------------------
 # FIX #2: Auto-reply / OOO subject prefixes
 # Covers English, German, French OOO formats
