@@ -4,4 +4,3 @@ run.log
 __pycache__/
 *.pyc
 .env
-emailReply.py
