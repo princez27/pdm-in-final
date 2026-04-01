@@ -488,22 +488,6 @@ with col_l2:
     st.plotly_chart(fig_user, use_container_width=True)
 
 with col_r2:
-    st.markdown('<div class="section-title">SLA Bar Summary</div>', unsafe_allow_html=True)
-    fig_bar = px.bar(
-        sla_df, x="Count", y="SLA Bucket", orientation="h",
-        color="SLA Bucket", color_discrete_map=SLA_COLORS, text="Percentage"
-    )
-    fig_bar.update_traces(texttemplate="%{text}%", textposition="outside")
-    fig_bar.update_layout(
-        showlegend=False,
-        xaxis=dict(title="Count"),
-        yaxis=dict(title="", categoryorder="array",
-                   categoryarray=list(reversed(SLA_ORDER))),
-        height=280, margin=dict(t=10, b=20, l=0, r=30),
-        paper_bgcolor="rgba(0,0,0,0)"
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
-
     st.markdown('<div class="section-title">Top Senders by Volume</div>', unsafe_allow_html=True)
     top_senders = (
         df["CorrespondentEmail"].value_counts().head(8)
