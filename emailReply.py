@@ -16,13 +16,14 @@ from tqdm import tqdm
 # TENANT_ID     = os.environ.get("TENANT_ID", "")
 # CLIENT_ID     = os.environ.get("CLIENT_ID", "")
 # CLIENT_SECRET = os.environ.get("CLIENT_SECRET", "")
+
 # -------------------
 # Date range configuration
 # Specify the date range to process emails (format: YYYY-MM-DD)
 # Leave empty strings to use DAYS_BACK instead (default: 1 day back)
 # -------------------
-START_DATE = "2025-09-01"  #"2026-03-20"
-END_DATE = "2025-09-30"    #"2026-03-23"
+START_DATE = "2026-01-01"  #"2026-03-20"
+END_DATE = "2026-03-31"    #"2026-03-23"
 DAYS_BACK = 1    # Used only if START_DATE is empty
 
 MAX_EMAILS = 100
@@ -56,7 +57,18 @@ EXCLUDED_SENDERS = {
     "hello@notification.grammarly.com", "ebill@airtel.com", "121@airtel.com", "ext-ticket@google.com", "theteam@spacematrix.com",
     "customercare.india@kcc.com", "hello@ncpmailer.asianpaints.com", "marketing@email.kiaindia.net", "marketing2@fcmlindia.co.in",
     "marketing@nmp.nidoworld.com", "connect@easemytrip.com", "contact@detailsbe.com", "machineries@nmp.nidoworld.com",
-    "uniopsservice@unilever.com", "marketing@united-group.in"
+    "uniopsservice@unilever.com", "marketing@united-group.in",
+    "office365reports@microsoft.com", "teamzoom@e.zoom.us",
+    "microsoftexchange329e71ec88ae4615bbc36ab6ce41109e@padams.co.in",
+    "info@isomi.com", "marketing@tactileindicators.in",
+    "teams@communication.microsoft.com", "invites@microsoft.com",
+    "autodesk@autodeskcommunications.com", "support@e.read.ai",
+    "m365copilotupdates@microsoft.com", "aec@autodeskcommunications.com",
+    "tatiana.fedotova@autodeskcommunications.com", "slee9@c.snap.com",
+    "shoutout@rapido.bike", "executiveassistant@e.read.ai",
+    "sendsecure.support@bankofamerica.com", "support@e-builder.net",
+    "bounces@e-builder.net", "microsoft365@communication.microsoft.com",
+    "hello@updates.rapido.bike"
 }
 
 # -------------------
