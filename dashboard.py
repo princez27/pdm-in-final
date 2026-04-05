@@ -199,7 +199,7 @@ def show_login():
         with st.form("login_form", clear_on_submit=False):
             username  = st.text_input("Username", placeholder="Enter username")
             password  = st.text_input("Password", type="password", placeholder="Enter password")
-            submitted = st.form_submit_button("Sign In", use_container_width=True)
+            submitted = st.form_submit_button("Sign In", width='stretch')
 
         if submitted:
             pw_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -317,11 +317,11 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption(f"Auto-refreshes every 5 min\nLast load: {pd.Timestamp.now().strftime('%H:%M:%S')}")
-    if st.button("Refresh Now", use_container_width=True):
+    if st.button("Refresh Now", width='stretch'):
         st.cache_data.clear()
         st.rerun()
     st.markdown("---")
-    if st.button("Logout", use_container_width=True):
+    if st.button("Logout", width='stretch'):
         st.session_state.authenticated = False
         st.session_state.username      = ""
         st.session_state.user_name     = ""
@@ -414,7 +414,7 @@ with col_l:
         margin=dict(t=10, b=10, l=10, r=10),
         paper_bgcolor="rgba(0,0,0,0)"
     )
-    st.plotly_chart(fig_pie, use_container_width=True)
+    st.plotly_chart(fig_pie, width='stretch')
 
 with col_r:
     st.markdown('<div class="section-title">Daily Reply Trend</div>', unsafe_allow_html=True)
@@ -444,7 +444,7 @@ with col_r:
         height=300, margin=dict(t=30, b=20, l=0, r=0),
         paper_bgcolor="rgba(0,0,0,0)"
     )
-    st.plotly_chart(fig_trend, use_container_width=True)
+    st.plotly_chart(fig_trend, width='stretch')
 
 
 # ─────────────────────────────────────────────
@@ -485,7 +485,7 @@ with col_l2:
         margin=dict(t=10, b=20, l=0, r=30),
         paper_bgcolor="rgba(0,0,0,0)"
     )
-    st.plotly_chart(fig_user, use_container_width=True)
+    st.plotly_chart(fig_user, width='stretch')
 
 with col_r2:
     st.markdown('<div class="section-title">Top Senders by Volume</div>', unsafe_allow_html=True)
@@ -494,7 +494,7 @@ with col_r2:
         .reset_index()
         .rename(columns={"CorrespondentEmail": "Sender", "count": "Emails"})
     )
-    st.dataframe(top_senders, use_container_width=True, hide_index=True, height=220)
+    st.dataframe(top_senders, width='stretch', hide_index=True, height=220)
 
 
 # ─────────────────────────────────────────────
@@ -525,7 +525,7 @@ fig_dow.update_layout(
     height=260, margin=dict(t=10, b=20, l=0, r=0),
     paper_bgcolor="rgba(0,0,0,0)"
 )
-st.plotly_chart(fig_dow, use_container_width=True)
+st.plotly_chart(fig_dow, width='stretch')
 
 
 # ─────────────────────────────────────────────
@@ -547,7 +547,7 @@ user_summary = (
     .reset_index()
     .sort_values("Total Emails", ascending=False)
 )
-st.dataframe(user_summary, use_container_width=True, hide_index=True)
+st.dataframe(user_summary, width='stretch', hide_index=True)
 
 
 # ─────────────────────────────────────────────
@@ -564,7 +564,7 @@ display_cols = [c for c in [
 
 st.dataframe(
     df[display_cols].sort_values("ReceivedTime", ascending=False),
-    use_container_width=True, hide_index=True, height=420
+    width='stretch', hide_index=True, height=420
 )
 
 
@@ -582,7 +582,7 @@ with dl1:
         data=df[display_cols].to_csv(index=False).encode("utf-8-sig"),
         file_name=f"EmailReply_{date_from}_to_{date_to}.csv",
         mime="text/csv",
-        use_container_width=True
+        width='stretch'
     )
 
 with dl2:
@@ -598,5 +598,5 @@ with dl2:
         data=buf.getvalue(),
         file_name=f"EmailReply_{date_from}_to_{date_to}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+        width='stretch'
     )
