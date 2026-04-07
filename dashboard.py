@@ -199,7 +199,7 @@ def show_login():
         with st.form("login_form", clear_on_submit=False):
             username  = st.text_input("Username", placeholder="Enter username")
             password  = st.text_input("Password", type="password", placeholder="Enter password")
-            submitted = st.form_submit_button("Sign In", width='stretch')
+            submitted = st.form_submit_button("Sign In")
 
         if submitted:
             pw_hash = hashlib.sha256(password.encode()).hexdigest()
