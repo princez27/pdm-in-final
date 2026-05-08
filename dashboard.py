@@ -267,7 +267,7 @@ def load_data():
     df["ReplyGapHours"]      = pd.to_numeric(df.get("ReplyGapHours"),       errors="coerce")
     df["ReplyGapDays"]       = pd.to_numeric(df.get("ReplyGapDays").astype(str).str.replace(r"\s*days?$", "", regex=True), errors="coerce")
     # CC-Count removed
-    df["Date"]               = df["ReceivedTime"].dt.date
+    df["Date"]               = df["ReceivedTime"].dt.normalize()   # keeps as Timestamp; NaT stays NaT
     df["DayOfWeek"]          = df["ReceivedTime"].dt.day_name()
     df["Replied"]            = df["SLABucket"].notna() & (df["SLABucket"] != "No Reply")
     df["User"]               = df["User"].str.strip().str.lower()
@@ -296,8 +296,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Filters")
 
-    min_date = df_raw["Date"].min()
-    max_date = df_raw["Date"].max()
+    min_date = df_raw["Date"].dropna().min().date()
+    max_date = df_raw["Date"].dropna().max().date()
 
     date_from = st.date_input("From Date", value=min_date, min_value=min_date, max_value=max_date)
     date_to   = st.date_input("To Date",   value=max_date, min_value=min_date, max_value=max_date)
@@ -333,7 +333,7 @@ with st.sidebar:
 # Apply filters
 # ─────────────────────────────────────────────
 df = df_raw.copy()
-df = df[(df["Date"] >= date_from) & (df["Date"] <= date_to)]
+df = df[(df["Date"] >= pd.Timestamp(date_from)) & (df["Date"] <= pd.Timestamp(date_to))]
 if sel_users:   df = df[df["User"].isin(sel_users)]
 if sel_senders: df = df[df["CorrespondentEmail"].isin(sel_senders)]
 if sel_buckets: df = df[df["SLABucket"].isin(sel_buckets)]
@@ -419,14 +419,12 @@ with col_l:
 with col_r:
     st.markdown('<div class="section-title">Daily Reply Trend</div>', unsafe_allow_html=True)
     daily = (
-        df.groupby("Date")
-        .apply(lambda x: pd.Series({
-            "Replied":  int(x["Replied"].sum()),
-            "No Reply": int((~x["Replied"]).sum()),
-            "Reply %":  round(x["Replied"].sum() / len(x) * 100, 1) if len(x) else 0,
-        }))
-        .reset_index()
+        df.groupby("Date", as_index=False)
+        .agg(Replied=("Replied", "sum"), Total=("Replied", "count"))
     )
+    daily["Replied"]  = daily["Replied"].astype(int)
+    daily["No Reply"] = (daily["Total"] - daily["Replied"]).astype(int)
+    daily["Reply %"]  = (daily["Replied"] / daily["Total"] * 100).round(1).where(daily["Total"] > 0, 0)
     fig_trend = go.Figure()
     fig_trend.add_bar(x=daily["Date"], y=daily["Replied"],  name="Replied",  marker_color="#16a34a")
     fig_trend.add_bar(x=daily["Date"], y=daily["No Reply"], name="No Reply", marker_color="#ef4444")
@@ -455,17 +453,14 @@ col_l2, col_r2 = st.columns([2, 1])
 with col_l2:
     st.markdown('<div class="section-title">Per-User Reply Performance</div>', unsafe_allow_html=True)
     user_perf = (
-        df.groupby("User")
-        .apply(lambda x: pd.Series({
-            "Total":           len(x),
-            "Replied":         int(x["Replied"].sum()),
-            "No Reply":        int((~x["Replied"]).sum()),
-            "Reply %":         round(x["Replied"].sum() / len(x) * 100, 1) if len(x) else 0,
-            "Avg Reply (hrs)": round(x["ReplyGapHours"].mean(), 2) if x["ReplyGapHours"].notna().any() else None,
-        }))
-        .reset_index()
-        .sort_values("Reply %", ascending=True)
+        df.groupby("User", as_index=False)
+        .agg(Total=("Replied", "count"), Replied=("Replied", "sum"), _avg=("ReplyGapHours", "mean"))
     )
+    user_perf["Replied"]         = user_perf["Replied"].astype(int)
+    user_perf["No Reply"]        = (user_perf["Total"] - user_perf["Replied"]).astype(int)
+    user_perf["Reply %"]         = (user_perf["Replied"] / user_perf["Total"] * 100).round(1).where(user_perf["Total"] > 0, 0)
+    user_perf["Avg Reply (hrs)"] = user_perf["_avg"].round(2)
+    user_perf = user_perf.drop("_avg", axis=1).sort_values("Reply %", ascending=True)
     fig_user = go.Figure()
     fig_user.add_bar(
         y=user_perf["User"], x=user_perf["Reply %"],
@@ -504,15 +499,14 @@ st.markdown("---")
 st.markdown('<div class="section-title">Reply Rate by Day of Week</div>', unsafe_allow_html=True)
 
 dow_df = (
-    df.groupby("DayOfWeek")
-    .apply(lambda x: pd.Series({
-        "Total":   len(x),
-        "Replied": int(x["Replied"].sum()),
-        "Reply %": round(x["Replied"].sum() / len(x) * 100, 1) if len(x) else 0,
-    }))
+    df.groupby("DayOfWeek", as_index=False)
+    .agg(Total=("Replied", "count"), Replied=("Replied", "sum"))
+    .set_index("DayOfWeek")
     .reindex(["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"])
     .reset_index()
 )
+dow_df[["Total", "Replied"]] = dow_df[["Total", "Replied"]].fillna(0).astype(int)
+dow_df["Reply %"] = (dow_df["Replied"] / dow_df["Total"] * 100).round(1).where(dow_df["Total"] > 0, 0)
 fig_dow = px.bar(
     dow_df, x="DayOfWeek", y="Reply %",
     color="Reply %", color_continuous_scale=["#ef4444","#f59e0b","#16a34a"],
@@ -534,18 +528,28 @@ st.plotly_chart(fig_dow, width='stretch')
 st.markdown("---")
 st.markdown('<div class="section-title">User Summary Table</div>', unsafe_allow_html=True)
 
+_us = (
+    df.groupby("User", as_index=False)
+    .agg(
+        total=("Replied", "count"),
+        replied=("Replied", "sum"),
+        avg_hrs=("ReplyGapHours", "mean"),
+        min_hrs=("ReplyGapHours", "min"),
+        max_hrs=("ReplyGapHours", "max"),
+        avg_days=("ReplyGapDays", "mean"),
+    )
+    .sort_values("total", ascending=False)
+)
+_us["No Reply"]        = (_us["total"] - _us["replied"]).astype(int)
+_us["Reply %"]         = (_us["replied"] / _us["total"] * 100).round(1).astype(str) + "%"
+_us["Avg Reply Time"]  = _us["avg_hrs"].apply(lambda x: f"{round(x,2)} hrs" if pd.notna(x) else "—")
+_us["Avg Reply Days"]  = _us["avg_days"].apply(lambda x: f"{round(x,2)} days" if pd.notna(x) else "—")
+_us["Min Reply (hrs)"] = _us["min_hrs"].round(2)
+_us["Max Reply (hrs)"] = _us["max_hrs"].round(2)
 user_summary = (
-    df.groupby("User")
-    .apply(lambda x: pd.Series({
-        "Total Emails":    len(x),
-        "Replied":         int(x["Replied"].sum()),
-        "No Reply":        int((~x["Replied"]).sum()),
-        "Reply %":         f"{round(x['Replied'].sum()/len(x)*100,1) if len(x) else 0}%",
-        "Avg Reply Time":  f"{round(x['ReplyGapHours'].mean(),2)} hrs" if x["ReplyGapHours"].notna().any() else "—",
-        "Min Reply (hrs)": round(x["ReplyGapHours"].min(), 2) if x["ReplyGapHours"].notna().any() else None,
-        "Max Reply (hrs)": round(x["ReplyGapHours"].max(), 2) if x["ReplyGapHours"].notna().any() else None,        "Avg Reply Days":  f"{round(x['ReplyGapDays'].mean(),2)} days" if x["ReplyGapDays"].notna().any() else "—",    }))
-    .reset_index()
-    .sort_values("Total Emails", ascending=False)
+    _us.rename(columns={"total": "Total Emails", "replied": "Replied"})
+    [["User", "Total Emails", "Replied", "No Reply", "Reply %",
+      "Avg Reply Time", "Min Reply (hrs)", "Max Reply (hrs)", "Avg Reply Days"]]
 )
 st.dataframe(user_summary, width='stretch', hide_index=True)
 

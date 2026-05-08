@@ -17,6 +17,7 @@ from tqdm import tqdm
 # CLIENT_ID     = os.environ.get("CLIENT_ID", "")
 # CLIENT_SECRET = os.environ.get("CLIENT_SECRET", "")
 
+
 # -------------------
 # Date range configuration
 # Specify the date range to process emails (format: YYYY-MM-DD)
