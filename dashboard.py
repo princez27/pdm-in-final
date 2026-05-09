@@ -6,6 +6,7 @@ from io import BytesIO
 import os
 import hashlib
 import time
+import datetime
 
 # ─────────────────────────────────────────────
 # Page config  (must be first Streamlit call)
@@ -297,10 +298,10 @@ with st.sidebar:
     st.markdown("### Filters")
 
     min_date = df_raw["Date"].dropna().min().date()
-    max_date = df_raw["Date"].dropna().max().date()
+    today    = datetime.date.today()
 
-    date_from = st.date_input("From Date", value=min_date, min_value=min_date)
-    date_to   = st.date_input("To Date",   value=max_date, min_value=min_date)
+    date_from = st.date_input("From Date", value=min_date, min_value=min_date, max_value=today)
+    date_to   = st.date_input("To Date",   value=today,    min_value=min_date, max_value=today)
     st.markdown("---")
 
     all_users = sorted(df_raw["User"].dropna().unique())
