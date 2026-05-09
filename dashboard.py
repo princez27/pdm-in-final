@@ -276,6 +276,22 @@ def load_data():
     return df
 
 
+@st.cache_data
+def build_csv(log_df):
+    return log_df.to_csv(index=False).encode("utf-8-sig")
+
+@st.cache_data
+def build_excel(log_df, summary_df, sla_df, dow_df, senders_df):
+    buf = BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        log_df.to_excel(writer,     index=False, sheet_name="Email Log")
+        summary_df.to_excel(writer, index=False, sheet_name="User Summary")
+        sla_df.to_excel(writer,     index=False, sheet_name="SLA Breakdown")
+        dow_df.to_excel(writer,     index=False, sheet_name="Day of Week")
+        senders_df.to_excel(writer, index=False, sheet_name="Top Senders")
+    return buf.getvalue()
+
+
 df_raw = load_data()
 
 if df_raw.empty:
@@ -567,10 +583,11 @@ display_cols = [c for c in [
     "SLABucket", "CCRecipients", "ReportDate"
 ] if c in df.columns]
 
-st.dataframe(
-    df[display_cols].sort_values("ReceivedTime", ascending=False),
-    width='stretch', hide_index=True, height=420
-)
+_log_sorted = df[display_cols].sort_values("ReceivedTime", ascending=False)
+_LOG_LIMIT  = 500
+st.dataframe(_log_sorted.head(_LOG_LIMIT), width='stretch', hide_index=True, height=420)
+if len(df) > _LOG_LIMIT:
+    st.caption(f"Showing latest {_LOG_LIMIT:,} of {len(df):,} records — download below for the full dataset.")
 
 
 # ─────────────────────────────────────────────
@@ -584,23 +601,16 @@ dl1, dl2, _ = st.columns([1, 1, 4])
 with dl1:
     st.download_button(
         label="⬇ Download CSV",
-        data=df[display_cols].to_csv(index=False).encode("utf-8-sig"),
+        data=build_csv(_log_sorted),
         file_name=f"EmailReply_{date_from}_to_{date_to}.csv",
         mime="text/csv",
         width='stretch'
     )
 
 with dl2:
-    buf = BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        df[display_cols].to_excel(writer,  index=False, sheet_name="Email Log")
-        user_summary.to_excel(writer,      index=False, sheet_name="User Summary")
-        sla_df.to_excel(writer,            index=False, sheet_name="SLA Breakdown")
-        dow_df.to_excel(writer,            index=False, sheet_name="Day of Week")
-        top_senders.to_excel(writer,       index=False, sheet_name="Top Senders")
     st.download_button(
         label="⬇ Download Excel",
-        data=buf.getvalue(),
+        data=build_excel(_log_sorted, user_summary, sla_df, dow_df, top_senders),
         file_name=f"EmailReply_{date_from}_to_{date_to}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         width='stretch'
