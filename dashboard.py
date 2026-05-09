@@ -6,7 +6,6 @@ from io import BytesIO
 import os
 import hashlib
 import time
-import datetime
 
 # ─────────────────────────────────────────────
 # Page config  (must be first Streamlit call)
@@ -276,22 +275,6 @@ def load_data():
     return df
 
 
-@st.cache_data
-def build_csv(log_df):
-    return log_df.to_csv(index=False).encode("utf-8-sig")
-
-@st.cache_data
-def build_excel(log_df, summary_df, sla_df, dow_df, senders_df):
-    buf = BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        log_df.to_excel(writer,     index=False, sheet_name="Email Log")
-        summary_df.to_excel(writer, index=False, sheet_name="User Summary")
-        sla_df.to_excel(writer,     index=False, sheet_name="SLA Breakdown")
-        dow_df.to_excel(writer,     index=False, sheet_name="Day of Week")
-        senders_df.to_excel(writer, index=False, sheet_name="Top Senders")
-    return buf.getvalue()
-
-
 df_raw = load_data()
 
 if df_raw.empty:
@@ -314,10 +297,10 @@ with st.sidebar:
     st.markdown("### Filters")
 
     min_date = df_raw["Date"].dropna().min().date()
-    today    = datetime.date.today()
+    max_date = df_raw["Date"].dropna().max().date()
 
-    date_from = st.date_input("From Date", value=min_date, min_value=min_date, max_value=today)
-    date_to   = st.date_input("To Date",   value=today,    min_value=min_date, max_value=today)
+    date_from = st.date_input("From Date", value=min_date, min_value=min_date)
+    date_to   = st.date_input("To Date",   value=max_date, min_value=min_date)
     st.markdown("---")
 
     all_users = sorted(df_raw["User"].dropna().unique())
@@ -583,11 +566,10 @@ display_cols = [c for c in [
     "SLABucket", "CCRecipients", "ReportDate"
 ] if c in df.columns]
 
-_log_sorted = df[display_cols].sort_values("ReceivedTime", ascending=False)
-_LOG_LIMIT  = 500
-st.dataframe(_log_sorted.head(_LOG_LIMIT), width='stretch', hide_index=True, height=420)
-if len(df) > _LOG_LIMIT:
-    st.caption(f"Showing latest {_LOG_LIMIT:,} of {len(df):,} records — download below for the full dataset.")
+st.dataframe(
+    df[display_cols].sort_values("ReceivedTime", ascending=False),
+    width='stretch', hide_index=True, height=420
+)
 
 
 # ─────────────────────────────────────────────
@@ -601,16 +583,23 @@ dl1, dl2, _ = st.columns([1, 1, 4])
 with dl1:
     st.download_button(
         label="⬇ Download CSV",
-        data=build_csv(_log_sorted),
+        data=df[display_cols].to_csv(index=False).encode("utf-8-sig"),
         file_name=f"EmailReply_{date_from}_to_{date_to}.csv",
         mime="text/csv",
         width='stretch'
     )
 
 with dl2:
+    buf = BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        df[display_cols].to_excel(writer,  index=False, sheet_name="Email Log")
+        user_summary.to_excel(writer,      index=False, sheet_name="User Summary")
+        sla_df.to_excel(writer,            index=False, sheet_name="SLA Breakdown")
+        dow_df.to_excel(writer,            index=False, sheet_name="Day of Week")
+        top_senders.to_excel(writer,       index=False, sheet_name="Top Senders")
     st.download_button(
         label="⬇ Download Excel",
-        data=build_excel(_log_sorted, user_summary, sla_df, dow_df, top_senders),
+        data=buf.getvalue(),
         file_name=f"EmailReply_{date_from}_to_{date_to}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         width='stretch'
