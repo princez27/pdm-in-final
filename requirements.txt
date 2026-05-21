@@ -1,5 +1,5 @@
 streamlit==1.57.0
-websockets==11.0.3
+websockets==15.0.1
 pandas
 plotly
 openpyxl
