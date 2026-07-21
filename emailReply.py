@@ -22,8 +22,8 @@ from tqdm import tqdm
 # Specify the date range to process emails (format: YYYY-MM-DD)
 # Leave empty strings to use DAYS_BACK instead (default: 1 day back)
 # -------------------
-START_DATE = "2026-06-28"  #"2026-03-20"
-END_DATE = "2026-06-30"    #"2026-03-23"
+START_DATE = "2026-05-31"  #"2026-03-20"
+END_DATE = "2026-07-01"    #"2026-03-23"
 DAYS_BACK = 1    # Used only if START_DATE is empty
 
 MAX_EMAILS = 100
