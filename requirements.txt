@@ -1,6 +1,7 @@
 streamlit==1.57.0
 websockets==15.0.1
 pandas
+pyarrow
 plotly
 openpyxl
 requests

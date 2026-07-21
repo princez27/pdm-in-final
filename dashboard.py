@@ -241,7 +241,7 @@ if not st.session_state.authenticated:
 # DASHBOARD  (only reached when authenticated)
 # ══════════════════════════════════════════════
 
-CSV_PATH = os.path.join(os.path.dirname(__file__), "EmailReplyReport.csv")
+PARQUET_PATH = os.path.join(os.path.dirname(__file__), "EmailReplyReport.parquet")
 
 SLA_ORDER  = ["<= 2 hours", "<= 4 hours", "<= 6 hours", "> 6 hours", "No Reply"]
 SLA_COLORS = {
@@ -258,27 +258,15 @@ SLA_COLORS = {
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=300)
 def load_data():
-    if not os.path.exists(CSV_PATH):
+    if not os.path.exists(PARQUET_PATH):
         return pd.DataFrame()
-    df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
-    df["ReceivedTime"]       = pd.to_datetime(df.get("ReceivedTime"),       errors="coerce")
-    df["ReplyTime"]          = pd.to_datetime(df.get("ReplyTime"),          errors="coerce")
-    df["ReportDate"]         = pd.to_datetime(df.get("ReportDate"),         errors="coerce")
-    df["ReplyGapHours"]      = pd.to_numeric(df.get("ReplyGapHours"),       errors="coerce")
-    df["ReplyGapDays"]       = pd.to_numeric(df.get("ReplyGapDays").astype(str).str.replace(r"\s*days?$", "", regex=True), errors="coerce")
-    # CC-Count removed
-    df["Date"]               = df["ReceivedTime"].dt.normalize()   # keeps as Timestamp; NaT stays NaT
-    df["DayOfWeek"]          = df["ReceivedTime"].dt.day_name()
-    df["Replied"]            = df["SLABucket"].notna() & (df["SLABucket"] != "No Reply")
-    df["User"]               = df["User"].str.strip().str.lower()
-    df["CorrespondentEmail"] = df["CorrespondentEmail"].str.strip().str.lower()
-    return df
+    return pd.read_parquet(PARQUET_PATH)
 
 
 df_raw = load_data()
 
 if df_raw.empty:
-    st.error("No data found — make sure `EmailReplyReport.csv` is in the same folder as dashboard.py.")
+    st.error("No data found — make sure `EmailReplyReport.parquet` is in the same folder as dashboard.py.")
     st.stop()
 
 
@@ -332,8 +320,7 @@ with st.sidebar:
 # ─────────────────────────────────────────────
 # Apply filters
 # ─────────────────────────────────────────────
-df = df_raw.copy()
-df = df[(df["Date"] >= pd.Timestamp(date_from)) & (df["Date"] <= pd.Timestamp(date_to))]
+df = df_raw[(df_raw["Date"] >= pd.Timestamp(date_from)) & (df_raw["Date"] <= pd.Timestamp(date_to))]
 if sel_users:   df = df[df["User"].isin(sel_users)]
 if sel_senders: df = df[df["CorrespondentEmail"].isin(sel_senders)]
 if sel_buckets: df = df[df["SLABucket"].isin(sel_buckets)]
