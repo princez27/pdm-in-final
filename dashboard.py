@@ -553,8 +553,15 @@ display_cols = [c for c in [
     "SLABucket", "CCRecipients", "ReportDate"
 ] if c in df.columns]
 
+MAX_DISPLAY_ROWS = 5000
+df_detail = df[display_cols].sort_values("ReceivedTime", ascending=False)
+if len(df_detail) > MAX_DISPLAY_ROWS:
+    st.caption(
+        f"Showing the most recent {MAX_DISPLAY_ROWS:,} of {len(df_detail):,} matching records. "
+        "Narrow the filters or use the download buttons below for the full set."
+    )
 st.dataframe(
-    df[display_cols].sort_values("ReceivedTime", ascending=False),
+    df_detail.head(MAX_DISPLAY_ROWS),
     width='stretch', hide_index=True, height=420
 )
 
@@ -568,26 +575,32 @@ st.markdown('<div class="section-title">Download Report</div>', unsafe_allow_htm
 dl1, dl2, _ = st.columns([1, 1, 4])
 
 with dl1:
-    st.download_button(
-        label="⬇ Download CSV",
-        data=df[display_cols].to_csv(index=False).encode("utf-8-sig"),
-        file_name=f"EmailReply_{date_from}_to_{date_to}.csv",
-        mime="text/csv",
-        width='stretch'
-    )
+    if st.button("Prepare CSV", width='stretch'):
+        st.session_state["_csv_export"] = df[display_cols].to_csv(index=False).encode("utf-8-sig")
+    if "_csv_export" in st.session_state:
+        st.download_button(
+            label="⬇ Download CSV",
+            data=st.session_state["_csv_export"],
+            file_name=f"EmailReply_{date_from}_to_{date_to}.csv",
+            mime="text/csv",
+            width='stretch'
+        )
 
 with dl2:
-    buf = BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        df[display_cols].to_excel(writer,  index=False, sheet_name="Email Log")
-        user_summary.to_excel(writer,      index=False, sheet_name="User Summary")
-        sla_df.to_excel(writer,            index=False, sheet_name="SLA Breakdown")
-        dow_df.to_excel(writer,            index=False, sheet_name="Day of Week")
-        top_senders.to_excel(writer,       index=False, sheet_name="Top Senders")
-    st.download_button(
-        label="⬇ Download Excel",
-        data=buf.getvalue(),
-        file_name=f"EmailReply_{date_from}_to_{date_to}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        width='stretch'
-    )
+    if st.button("Prepare Excel", width='stretch'):
+        buf = BytesIO()
+        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+            df[display_cols].to_excel(writer,  index=False, sheet_name="Email Log")
+            user_summary.to_excel(writer,      index=False, sheet_name="User Summary")
+            sla_df.to_excel(writer,            index=False, sheet_name="SLA Breakdown")
+            dow_df.to_excel(writer,            index=False, sheet_name="Day of Week")
+            top_senders.to_excel(writer,       index=False, sheet_name="Top Senders")
+        st.session_state["_xlsx_export"] = buf.getvalue()
+    if "_xlsx_export" in st.session_state:
+        st.download_button(
+            label="⬇ Download Excel",
+            data=st.session_state["_xlsx_export"],
+            file_name=f"EmailReply_{date_from}_to_{date_to}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            width='stretch'
+        )
