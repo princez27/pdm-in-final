@@ -14,6 +14,8 @@ import os
 import re
 import pandas as pd
 
+from exclusions import is_excluded_sender
+
 CSV_PATH     = os.path.join(os.path.dirname(__file__), "EmailReplyReport.csv")
 PARQUET_PATH = os.path.join(os.path.dirname(__file__), "EmailReplyReport.parquet")
 
@@ -40,6 +42,12 @@ def parse_mixed_datetime(series, iso_format, dmy_format):
 
 def build():
     df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
+
+    # Re-apply the current exclusions so rows logged before a sender was excluded drop out too.
+    sender = df["CorrespondentEmail"].fillna("").str.strip().str.lower()
+    excluded = sender.isin({e for e in sender.unique() if is_excluded_sender(e)})
+    df = df[~excluded].copy()
+    print(f"Dropped {excluded.sum():,} rows from no-reply / automated senders")
 
     df["ReceivedTime"] = parse_mixed_datetime(df.get("ReceivedTime"), "%Y-%m-%d %H:%M:%S", "%d-%m-%Y %H:%M")
     df["ReplyTime"]    = parse_mixed_datetime(df.get("ReplyTime"),    "%Y-%m-%d %H:%M:%S", "%d-%m-%Y %H:%M")
