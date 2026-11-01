@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 .env
 EmailReplyReport.csv
+co-in.txt
+reply_check/Email Summary.xlsx
+reply_check/reply_check_details.csv
